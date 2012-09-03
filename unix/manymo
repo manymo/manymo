@@ -1,0 +1,69 @@
+#!/usr/bin/expect -f
+
+set command [lindex $argv 0]
+set cmdargs [split [lindex $argv 1] {:}]
+
+log_user 0
+
+proc unauthorized {} {
+  puts "Unauthorized."
+  exit -1
+}
+
+proc tunnel a {
+  set host [lindex $a 0]
+  set port [lindex $a 1]
+  set password [lindex $a 2]
+  set port2 [expr $port + 1]
+  spawn ssh -fN -o "ExitOnForwardFailure yes" -L$port:localhost:$port -L$port2:localhost:$port2 adb$port@$host
+  set ssh_id $spawn_id
+  set pid [ exp_pid]
+  set timeout 10
+  expect { 
+    -re ".*assword:" {
+      send "$password\n"
+    }
+    timeout {
+      puts "Timed out while attempting to setup tunnel."
+      exit -1
+    }
+  }
+  expect {
+    "\n"
+  }
+  set timeout 2
+  set connected 0
+  expect {
+    -re "Permission denied" unauthorized
+    -re "Address already in use" {
+      puts "Port $port already in use."
+    }
+    eof {
+      #puts "Connected"
+      set connected 1
+    }
+  }
+  if { $connected == 1} {
+    #log_user 1
+    set timeout 10
+    spawn adb kill-server
+    sleep 1
+    spawn adb devices
+    expect {
+      "emulator-$port" { 
+        puts "emulator-$port successfully connected via tunnel to Manymo." 
+      }
+      timeout {
+        puts "Unable to setup emulator tunnel."
+      }
+      "error: protocol fault (no status)" {
+        puts "Could not get status of emulator.  Please check adb devices for emulator status."
+      }
+    }  
+  }
+}
+
+switch $command {
+  tunnel { tunnel $cmdargs }
+}
+
