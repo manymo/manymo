@@ -5,6 +5,11 @@ set cmdargs [split [lindex $argv 1] {:}]
 
 log_user 0
 
+proc usage {} {
+  puts "This command is meant to be run with arguments shown when starting a native dev emulator at https://app.manymo.com"
+  exit 0
+} 
+
 proc unauthorized {} {
   puts "Unauthorized."
   exit -1
@@ -65,5 +70,6 @@ proc tunnel a {
 
 switch $command {
   tunnel { tunnel $cmdargs }
+  default { usage }
 }
 
