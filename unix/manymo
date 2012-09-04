@@ -44,7 +44,7 @@ proc tunnel a {
   expect {
     "\n"
   }
-  set timeout 2
+  set timeout 5
   set connected 0
   expect {
     -re "Permission denied" unauthorized
@@ -54,6 +54,10 @@ proc tunnel a {
     eof {
       #puts "Connected"
       set connected 1
+    }
+    timeout {
+      puts "Timed out getting status of ssh connection."
+      exit -1
     }
   }
   if { $connected == 1} {
@@ -73,7 +77,7 @@ proc tunnel a {
         puts "Could not get status of emulator.  Please check adb devices for emulator status."
       }
     }  
-  }
+  } 
 }
 
 switch $command {
