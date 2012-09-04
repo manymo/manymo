@@ -24,13 +24,21 @@ proc tunnel a {
   set ssh_id $spawn_id
   set pid [ exp_pid]
   set timeout 10
-  expect { 
-    -re ".*assword:" {
-      send "$password\n"
-    }
-    timeout {
-      puts "Timed out while attempting to setup tunnel."
-      exit -1
+  set sent_password 0
+  set ssh_error 0
+  while { $sent_password == 0 && $ssh_error == 0 } {
+    expect { 
+      -re ".*assword:" {
+        send "$password\n"
+        set sent_password 1
+      }
+      -re "authenticity of host.*can't be established.*\(yes/no\)\?" {
+        send "yes\n"
+      }
+      timeout {
+        puts "Timed out while attempting to setup tunnel."
+        exit -1
+      }
     }
   }
   expect {
