@@ -16,11 +16,11 @@ proc unauthorized {} {
 }
 
 proc check_for_adb {} {
-  spawn which -s adb
+  spawn which adb
   expect eof
   catch wait reason
   set exit_status [lindex $reason 3]
-  if { $exit_status == 1 } {
+  if { $exit_status != 0 } {
     puts "Could not find adb. Please install the Android sdk and make sure adb is in your path."
     exit 1
   }
