@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+
+usage()
+{
+  printf "%b" "
+
+Usage
+
+  manymo-installer
+
+"
+}
+
+install_release()
+{
+  log "Downloading manymo command"
+  get_and_install_bin \
+    https://github.com/manymo/manymo_command/raw/master/unix/manymo \
+    manymo 
+}
+
+get_and_install_bin()
+{
+  typeset _url _file
+  _url=$1
+  _file=$2
+
+  if curl -L ${_url} -o ${manymo_bin_path}/${_file}
+  then
+    true
+  else
+    typeset ret=$?
+    case $ret in
+      (60)
+        log "
+Could not download '${_url}'.
+  Make sure your certificates are up to date as described above.
+  To continue in insecure mode run 'echo insecure >> ~/.curlrc'.
+"
+        return 60
+        ;;
+      (*)
+        log "
+Could not download '${_url}'.
+  curl returned status '$ret'.
+"
+        return 1
+        ;;
+    esac
+  fi
+  
+  chmod ogu+x ${manymo_bin_path}/${_file}
+}
+
+setup_user_profile()
+{
+  (( UID > 0 )) || return 0
+
+  export user_profile_file
+  export -a user_login_files user_rc_files
+  typeset -a search_list target_rc target_login found_rc found_login
+  
+  search_list=(
+    ~/.profile
+    ~/.bashrc ~/.bash_profile ~/.bash_login
+    ~/.zshenv ~/.zprofile ~/.zshrc ~/.zlogin
+  )
+  target_rc=( ~/.bashrc )
+  [[ -f ~/.zshenv ]] &&
+    target_rc+=( ~/.zshenv ) || target_rc+=( ~/.zshrc )
+  [[ -f ~/.bash_profile ]] &&
+    target_login+=( ~/.bash_profile ) || target_login+=( ~/.bash_login )
+  [[ -f ~/.zprofile ]] &&
+    target_login+=( ~/.zprofile ) || target_login+=( ~/.zlogin )
+
+  for profile_file in ${search_list[@]}
+  do
+    [[ -f $profile_file ]] &&
+      \grep PATH=.*\$HOME/.manymo/bin $profile_file >/dev/null &&
+      found_rc+=( $profile_file ) || true
+  done
+
+  if (( ${#found_rc[@]} == 0 ))
+  then
+    printf "%b" "    Adding manymo PATH line to ${target_rc[*]}.\n"
+    for profile_file in ${target_rc[@]}
+    do
+      touch $profile_file
+      printf "%b" "
+PATH=\$PATH:\$HOME/.manymo/bin # Add manymo to PATH for scripting
+" >> $profile_file
+    done
+    user_rc_files=( ${target_rc[@]} )
+  else
+    printf "%b" "    Manymo PATH line found in ${found_rc[*]}.\n"
+    user_rc_files=( ${found_rc[@]} )
+  fi
+  
+  return 0
+}
+
+
+if [[ -z "${manymo_path:-}" ]]
+then
+  if (( UID == 0 ))
+  then
+    manymo_user_install_flag=0
+    manymo_prefix="/usr/local"
+    manymo_path="${manymo_prefix}/manymo"
+  else
+    manymo_user_install_flag=1
+    manymo_prefix="$HOME"
+    manymo_path="${manymo_prefix}/.manymo"
+  fi
+fi
+if [[ -z "${manymo_prefix}" ]]
+then
+  manymo_prefix=$( dirname $manymo_path )
+fi
+
+# Parse CLI arguments.
+while (( $# > 0 ))
+do
+  token="$1"
+  shift
+  case "$token" in
+
+    --trace)
+      set -o xtrace
+      manymo_trace_flag=1
+      ;;
+
+    help|usage)
+      usage
+      exit 0
+      ;;
+  *)
+    usage
+    exit 1
+    ;;
+
+  esac
+done
+
+case "$manymo_path" in
+  *[[:space:]]*)
+    printf "%b" "
+Oops. You have a space in your home dir name. We don't support that
+(yet).  Please download https://github.com/manymo/manymo_command/raw/master/unix/manymo
+and add it to your path manually. 
+
+"
+    exit 2
+  ;;
+esac
+
+if [[ "$manymo_path" != /* ]]
+then
+  fail "The manymo install path must be fully qualified. Tried $manymo_path"
+fi
+
+manymo_bin_path="$manymo_path/bin"
+
+for dir in "$manymo_path" "$manymo_bin_path"
+do
+  if [[ ! -d "$dir" ]]
+  then
+    mkdir -p "$dir"
+  fi
+done
+
+# Perform the actual installation.
+install_release
+setup_user_profile
+
