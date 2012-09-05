@@ -14,7 +14,7 @@ Usage
 install_release()
 {
   get_and_install_bin \
-    https://github.com/manymo/manymo/raw/master/unix/manymo \
+    https://raw.github.com/manymo/manymo/master/unix/manymo \
     manymo 
 }
 
