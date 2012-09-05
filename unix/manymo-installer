@@ -67,9 +67,9 @@ setup_user_profile()
   [[ -f ~/.zshenv ]] &&
     target_rc+=( ~/.zshenv ) || target_rc+=( ~/.zshrc )
   [[ -f ~/.bash_profile ]] &&
-    target_login+=( ~/.bash_profile ) || target_login+=( ~/.bash_login )
+    target_rc+=( ~/.bash_profile ) || target_rc+=( ~/.bash_login )
   [[ -f ~/.zprofile ]] &&
-    target_login+=( ~/.zprofile ) || target_login+=( ~/.zlogin )
+    target_rc+=( ~/.zprofile ) || target_rc+=( ~/.zlogin )
 
   for profile_file in ${search_list[@]}
   do
