@@ -83,8 +83,9 @@ setup_user_profile()
     printf "%b" "    Adding manymo PATH line to ${target_rc[*]}.\n"
     for profile_file in ${target_rc[@]}
     do
-      touch $profile_file
-      printf "%b" "
+      [[ -f $profile_file ]] &&
+        \touch $profile_file &&
+        \printf "%b" "
 PATH=\$PATH:\$HOME/.manymo/bin # Add manymo to PATH for scripting
 " >> $profile_file
     done
