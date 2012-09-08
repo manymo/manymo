@@ -1,3 +1,6 @@
-This is the Manymo command line utility.
+
+# Installation
+ 
+curl https://raw.github.com/manymo/manymo/master/unix/manymo-installer | bash
 
 
