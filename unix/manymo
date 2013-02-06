@@ -63,13 +63,9 @@ proc tunnel a {
     -re "Address already in use" {
       puts "Port $port already in use."
     }
-    eof {
+    default {
       #puts "Connected"
       set connected 1
-    }
-    timeout {
-      puts "Timed out getting status of ssh connection."
-      exit -1
     }
   }
   if { $connected == 1} {
