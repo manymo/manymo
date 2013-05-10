@@ -1,6 +1,6 @@
 
 # Installation
  
-curl https://raw.github.com/manymo/manymo/master/unix/manymo-installer | bash
+curl https://raw.github.com/manymo/manymo/master/manymo-installer | bash
 
 
