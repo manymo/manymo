@@ -17,6 +17,7 @@ require "uri"
 require "optparse"
 require 'fileutils'
 require 'open3' if is_windows?
+require 'shellwords'
 
 
 API_BASE_URL="https://www.manymo.com/api/v1"
@@ -326,12 +327,12 @@ def tunnel(worker_host, worker_port, password, silent = false)
 
   if local_port
     remove_lockfile(local_port)
-    adb_connect_output = `#{adb_path} connect localhost:#{local_port + 1}`
+    adb_connect_output = `#{adb_path.shellescape} connect localhost:#{local_port + 1}`
     if !adb_connect_output.match(/connected/)
       STDERR.puts "Could not connect local adb server to manymo tunnel: #{adb_connect_output}"
       exit 1
     end
-    devices_output = `#{adb_path} devices`
+    devices_output = `#{adb_path.shellescape} devices`
     device_listed = false
 
     if devices_output.match(/localhost:#{local_port + 1}/)
@@ -461,7 +462,7 @@ manymo [options] COMMAND [ARGUMENTS]
 Commands:
         launch EMULATORNAME          Launch a headless emulator and make it appear like a local device
         list                         List emulators; use the name attribute with the launch command
-        shutdown [SERIALNUMBER]      Shutdown specified headless emulator, or all if no serial number provided
+        shutdown [SERIALNUMBER]      Shutdown specified headless emulator or tunnel, or all if serial number omitted 
         tunnel TUNNELKEY             Make an in-browser emulator appear like a local device
 
 Options:
