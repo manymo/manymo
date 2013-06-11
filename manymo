@@ -21,7 +21,8 @@ require 'shellwords'
 
 
 API_BASE_URL="https://www.manymo.com/api/v1"
-# API_BASE_URL="http://localhost:3000/api/v1"
+#API_BASE_URL="http://devwww.manymo.com/api/v1"
+#API_BASE_URL="http://localhost:3000/api/v1"
 
 def adb_path
   @options[:adb_path] || 'adb'
@@ -255,7 +256,7 @@ def start_tunnel_windows(worker_host, worker_port, password)
 
   expect(command, matches, {:timeout => 30})
 
-  connected
+  local_port if connected
 end
 
 def start_tunnel_unix(worker_host, worker_port, password, silent = false) 
@@ -407,23 +408,24 @@ def shutdown(arg)
     output.each do |line|
       node, commandline, pid = line.split(",")
       if commandline && commandline.match(/-L (\d{4}):localhost:(\d{4}) -L (\d{4}):localhost:(\d{4}) adb(\d{4})@(.*\.manymo\.com)/)
-        matches << [pid.to_i, "localhost:#{$3}"]
+        matches << [pid.to_i, "localhost:#{$3}", $6, $5]
       end
     end
   else
     processes.inject({}) do |all, (command, pid)| 
       if command.match(/-L(\d{4}):localhost:(\d{4}) -L(\d{4}):localhost:(\d{4}) adb(\d{4})@(.*\.manymo\.com)/)
-        matches << [pid.to_i, "localhost:#{$3}"]
+        matches << [pid.to_i, "localhost:#{$3}", $6, $5]
       end
     end
   end
 
   killed = []
-  matches.each do |pid, name|
+  matches.each do |pid, name, hostname, remote_port|
     if arg.nil? || name == arg
       begin
         #puts "Killing #{pid.inspect}"
         Process.kill('KILL', pid)
+        get("/emulators/shutdown_emulator?hostname=#{hostname}&remote_port=#{remote_port}")
         killed << name
       rescue Errno::ESRCH
         STDERR.puts "Can't kill process: not found"
