@@ -491,6 +491,8 @@ command = ARGV[0]
 check_for_adb
 
 case command
+when /token/
+  get_auth_token(true)
 when /tunnel/
   args = ARGV[1].split(':')
   if args.count == 3
