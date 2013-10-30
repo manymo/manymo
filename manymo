@@ -16,13 +16,25 @@ require "net/https"
 require "uri"
 require "optparse"
 require 'fileutils'
-require 'open3' if is_windows?
+if is_windows?
+  require 'open3'
+  require 'childprocess'
+end
 require 'shellwords'
 
 
 API_BASE_URL="https://www.manymo.com/api/v1"
 #API_BASE_URL="http://devwww.manymo.com/api/v1"
 #API_BASE_URL="http://localhost:3000/api/v1"
+
+# monkey patch childprocess to avoid unwanted quoting
+if is_windows?
+  class ChildProcess::Windows::ProcessBuilder
+    def quote_if_necessary(str)
+      str
+    end
+  end
+end
 
 def adb_path
   @options[:adb_path] || 'adb'
@@ -36,18 +48,10 @@ def check_for_adb
     end
   else
     found_adb = false
-    if is_windows?
-      begin
-        pid = Process.spawn('adb version', :out=>"/dev/null", :err=>"/dev/null")
-        Process.detach(pid)
-        found_adb = true
-      rescue Errno::ENOENT
-      end
-    else
-      `which adb`
-      if $?.exitstatus == 0
-        found_adb = true
-      end
+    begin
+      `adb version`
+      found_adb = true
+    rescue Errno::ENOENT
     end
     if (!found_adb)
       STDERR.puts "Could not find adb. Please install the Android SDK and make sure its platform-tools directory is in your PATH."
@@ -134,10 +138,17 @@ end
 
 def spawn(command)
   if is_windows?
-    r_stdin, w_stdin = IO.pipe
+    ChildProcess::Windows::Lib.set_handle_inheritance ChildProcess::Windows::Lib.handle_for(STDERR), false
+    ChildProcess::Windows::Lib.set_handle_inheritance ChildProcess::Windows::Lib.handle_for(STDOUT), false
     r_stdout, w_stdout = IO.pipe
-    pid = Process.spawn(command, :in => r_stdin, :out => w_stdout, :err => :out)
-    [r_stdout, w_stdin, pid]
+    ChildProcess::Windows::Lib.set_handle_inheritance ChildProcess::Windows::Lib.handle_for(w_stdout), false
+    process = ChildProcess.build(command)
+    process.io.stdout = process.io.stderr = w_stdout
+    process.duplex    = true # sets up pipe so process.io.stdin will be available after .start
+    process.detach
+    process.start
+    w_stdout.close
+    [r_stdout, process.io.stdin, process.pid]
   else
     PTY.spawn(command)
   end
@@ -148,7 +159,7 @@ def expect(command, matches, options = {})
 
   r_stdout, w_stdin, pid = spawn(command)
 
-  #puts "#{command.split.first} pid = #{pid}"
+  #puts "pid = #{pid}, #{w_stdin.inspect}"
 
   output_buffer = ""
   finished = false
@@ -167,6 +178,7 @@ def expect(command, matches, options = {})
 
   while !finished
     begin
+      #puts "going to select on #{r_stdout.inspect}"
       ready_handles = IO.select([r_stdout], [], [], select_timeout)
       #puts "(#{pid}) Ready handles = #{ready_handles.inspect}"
       if ready_handles && ready_handles[0].include?(r_stdout)
@@ -193,13 +205,15 @@ def expect(command, matches, options = {})
           end
         end
       end
-    rescue EOFError
+    rescue EOFError,Errno::EIO
       finished = true
       if eof_proc
         eof_proc.call
       end
     end
   end
+  r_stdout.close
+  w_stdin.close
   Process.detach(pid)
 end
 
@@ -263,7 +277,7 @@ def start_tunnel_unix(worker_host, worker_port, password, silent = false)
   begin
     worker_port = worker_port.to_i
     local_port = find_available_local_emulator_port
-    command = "ssh -fN -o ExitOnForwardFailure\\ yes -o StrictHostKeyChecking\\ no -L#{local_port}:localhost:#{worker_port} -L#{local_port+1}:localhost:#{worker_port+1} adb#{worker_port}@#{worker_host}"
+    command = "nohup ssh -fN -o ExitOnForwardFailure\\ yes -o StrictHostKeyChecking\\ no -L#{local_port}:localhost:#{worker_port} -L#{local_port+1}:localhost:#{worker_port+1} adb#{worker_port}@#{worker_host}"
 
     sent_password = false
     connected = false
@@ -465,6 +479,7 @@ Commands:
         launch EMULATORNAME          Launch a headless emulator and make it appear like a local device
         list                         List emulators; use the name attribute with the launch command
         shutdown [SERIALNUMBER]      Shutdown specified headless emulator or tunnel, or all if serial number omitted 
+        token                        Display a prompt to enter authorization token
         tunnel TUNNELKEY             Make an in-browser emulator appear like a local device
 
 Options:
