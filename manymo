@@ -277,7 +277,7 @@ def start_tunnel_unix(worker_host, worker_port, password, silent = false)
   begin
     worker_port = worker_port.to_i
     local_port = find_available_local_emulator_port
-    command = "nohup ssh -fN -o ExitOnForwardFailure\\ yes -o StrictHostKeyChecking\\ no -L#{local_port}:localhost:#{worker_port} -L#{local_port+1}:localhost:#{worker_port+1} adb#{worker_port}@#{worker_host}"
+    command = "ssh -fN -o ExitOnForwardFailure\\ yes -o StrictHostKeyChecking\\ no -L#{local_port}:localhost:#{worker_port} -L#{local_port+1}:localhost:#{worker_port+1} adb#{worker_port}@#{worker_host}"
 
     sent_password = false
     connected = false
@@ -315,6 +315,10 @@ def start_tunnel_unix(worker_host, worker_port, password, silent = false)
         exit 1
         }],
       [/.*assword:/, lambda { |match_data, w_stdin|
+        if sent_password
+          STDERR.puts "Invalid tunnel key."
+          exit 1
+        end
         w_stdin.puts password
         sent_password = true
         [true, 5] # update timeout
@@ -336,29 +340,31 @@ def start_tunnel_unix(worker_host, worker_port, password, silent = false)
   local_port if connected
 end
 
+def is_device_listed?(console_port)
+  devices_output = `#{adb_path.shellescape} devices`
+  devices_output.match(/emulator-#{console_port}/)
+end
+
 def tunnel(worker_host, worker_port, password, silent = false)
 
   local_port = start_tunnel(worker_host, worker_port, password)
 
   if local_port
     remove_lockfile(local_port)
-    adb_connect_output = `#{adb_path.shellescape} connect localhost:#{local_port + 1}`
-    if !adb_connect_output.match(/connected/)
-      STDERR.puts "Could not connect local adb server to manymo tunnel: #{adb_connect_output}"
-      exit 1
-    end
-    devices_output = `#{adb_path.shellescape} devices`
-    device_listed = false
 
-    if devices_output.match(/localhost:#{local_port + 1}/)
-      puts "Tunnel established; local serial number is: localhost:#{local_port + 1}" unless silent
-      device_listed = true
-    elsif devices_output.match(/error: protocol fault \(no status\)/)
-      STDERR.puts "Could not get status of emulator.  Please check adb devices for emulator status."
-      exit 1
+    # This will start adb server if it isn't started
+    listed = is_device_listed?(local_port)
+
+    if !listed
+      s = TCPSocket.open('localhost', 5037)
+      s.puts("0012host:emulator:#{local_port+1}")
+      # Check again
+      listed = is_device_listed?(local_port)
     end
 
-    if !device_listed
+    if listed
+      puts "Tunnel established; local serial number is: emulator:#{local_port}" unless silent
+    else
       STDERR.puts "Could not get status of emulator.  Please check adb devices for emulator status."
       exit 1
     end
