@@ -22,6 +22,8 @@ if is_windows?
 end
 require 'shellwords'
 
+CLIENT_VERSION="1.2"
+
 
 API_BASE_URL="https://www.manymo.com/api/v1"
 #API_BASE_URL="http://devwww.manymo.com/api/v1"
@@ -188,6 +190,7 @@ def expect(command, matches, options = {})
         re_matches.each do |re,proc|
           #puts "Comparing #{re.inspect} against #{output_buffer.inspect}"
           if (match = re.match(output_buffer))
+            #puts "Matched #{re.inspect} against #{output_buffer.inspect}"
             output_buffer = output_buffer[(match.offset(0).last)..-1]
             do_continue, new_timeout = proc.call(match, w_stdin)
             finished = true if !do_continue
@@ -277,7 +280,7 @@ def start_tunnel_unix(worker_host, worker_port, password, silent = false)
   begin
     worker_port = worker_port.to_i
     local_port = find_available_local_emulator_port
-    command = "ssh -fN -o ExitOnForwardFailure\\ yes -o StrictHostKeyChecking\\ no -L#{local_port}:localhost:#{worker_port} -L#{local_port+1}:localhost:#{worker_port+1} adb#{worker_port}@#{worker_host}"
+    command = "nohup ssh -fN -o ExitOnForwardFailure\\ yes -o StrictHostKeyChecking\\ no -L#{local_port}:localhost:#{worker_port} -L#{local_port+1}:localhost:#{worker_port+1} adb#{worker_port}@#{worker_host} > /tmp/manymo_tunnel.out"
 
     sent_password = false
     connected = false
@@ -473,7 +476,7 @@ end
 @options = {}
 @parser = OptionParser.new do |opts|
   opts.banner = <<EOT
-manymo - Manymo Command Line Tool
+manymo - Manymo Command Line Tool (Version #{CLIENT_VERSION})
 
 Full documentation at https://www.manymo.com/pages/documentation/manymo-command-line-tool
  
@@ -531,6 +534,8 @@ when /launch/
   end
 when /shutdown/
   shutdown(ARGV[1])
+when /version/
+  puts "Version #{CLIENT_VERSION}"
 else
   usage
 end
