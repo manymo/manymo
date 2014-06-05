@@ -5,7 +5,7 @@ You will need adb (from the [Android SDK](http://developer.android.com/sdk)) in 
 ### Installation (and upgrade)
  
 ```
-curl https://raw.github.com/manymo/manymo/master/manymo-installer | bash
+curl https://raw.githubusercontent.com/manymo/manymo/master/manymo-installer | bash
 ```
 
 This will install the client into your workspace and add it to your PATH. 
