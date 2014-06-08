@@ -1,6 +1,6 @@
 ### Dependencies
 
- * adb (from the [Android SDK](http://developer.android.com/sdk)), and in your PATH.
+ * adb (from the [Android SDK](http://developer.android.com/sdk)) in your PATH.
  * JDK 6
 
 ### Installation (and upgrade)
