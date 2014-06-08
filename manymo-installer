@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+
 usage()
 {
   printf "%b" "
@@ -11,32 +12,11 @@ Usage
 "
 }
 
-check_ruby()
-{
-  if hash ruby 2>/dev/null; then
-    ruby_major_version=$(ruby --version | sed 's/ruby //' | cut -c 1-1)
-    ruby_minor_version=$(ruby --version | sed 's/ruby //' | cut -c 3-3)
-    if [[ "$ruby_major_version" == "1" ]]; then 
-      if [[ "$ruby_minor_version" -ge "8" ]]; then
-        ok_ruby_version="yes"
-      fi
-    fi
-    if [[ "$ruby_major_version" -gt "1" ]]; then 
-      ok_ruby_version="yes"
-    fi
-    echo $ruby_version
-  fi
-  if [[ "$ok_ruby_version" != "yes" ]]; then
-    echo "manymo requires ruby 1.8 or greater."
-    exit 1
-  fi
-}
-
 install_release()
 {
   get_and_install_bin \
-    https://raw.github.com/manymo/manymo/master/manymo \
-    manymo 
+    https://raw.githubusercontent.com/manymo/manymo/master/manymo-2.1.tar.gz \
+    manymo-2.1.tar.gz
 }
 
 get_and_install_bin()
@@ -45,7 +25,7 @@ get_and_install_bin()
   _url=$1
   _file=$2
 
-  if curl -L ${_url} -o ${manymo_bin_path}/${_file}
+  if curl -L ${_url} -o ${manymo_path}/${_file}
   then
     true
   else
@@ -69,7 +49,8 @@ Could not download '${_url}'.
     esac
   fi
   
-  chmod ogu+x ${manymo_bin_path}/${_file}
+  tar -xz --strip-components 1 -C ${manymo_path} -f ${manymo_path}/${_file}
+  chmod ogu+x ${manymo_bin_path}/manymo
   printf "%b" "    Manymo command installed!\n"
 }
 
@@ -184,7 +165,6 @@ do
 done
 
 # Perform the actual installation.
-check_ruby
 install_release
 setup_user_profile
 exit 0
