@@ -1,6 +1,7 @@
 ### Dependencies
 
-You will need adb (from the [Android SDK](http://developer.android.com/sdk)) in your PATH.
+ * adb (from the [Android SDK](http://developer.android.com/sdk)) in your PATH.
+ * JDK 6 or newer
 
 ### Installation (and upgrade)
  
@@ -18,7 +19,6 @@ manymo [options] COMMAND [ARGUMENTS]
 Commands:
         launch EMULATORNAME          Launch a headless emulator and make it appear like a local device
         list                         List emulators; use the name attribute with the launch command
-        shutdown [SERIALNUMBER]      Shutdown specified headless emulator or tunnel, or all if serial number omitted 
         token                        Display a prompt to enter authorization token
         tunnel TUNNELKEY             Make an in-browser emulator appear like a local device
 
