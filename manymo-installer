@@ -15,8 +15,8 @@ Usage
 install_release()
 {
   get_and_install_bin \
-    https://raw.githubusercontent.com/manymo/manymo/master/manymo-2.1.1.tar.gz \
-    manymo-2.1.1.tar.gz
+    https://raw.githubusercontent.com/manymo/manymo/master/manymo-2.1.2.tar.gz \
+    manymo-2.1.2.tar.gz
 }
 
 get_and_install_bin()
