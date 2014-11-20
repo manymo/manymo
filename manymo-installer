@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+manymo tunnel w5d.manymo.com:5560:uIBfNmZx
 
 usage()
 {
